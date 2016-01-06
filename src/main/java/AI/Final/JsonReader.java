@@ -301,19 +301,38 @@ public class JsonReader {
     		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
     		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
     		
-			if(rel.equals("relatedto")){
+			if(rel.equals("relatedto") || rel.equals("hassubevent") 
+					/*|| rel.equals("hasprerequisite")*/){
 	    		if(start[2].equals("en")&&end[2].equals("en")){
 	    			if(start[3].equals(keyword)){
 	    				if(timeSet.contains(end[3]))
 	    					time.add(new Concept(end[3],score));
-	    				else
-	    					q.add(new Concept(end[3],1));
+	    				else{
+	    					String buffer[] = end[3].split("_");
+	    					for(String s:buffer){
+	    						if(timeSet.contains(s)){
+	    	    					time.add(new Concept(s,score));
+	    	    					break;
+	    						}
+	    					}
+	    					if(score > 1)
+	    						q.add(new Concept(end[3],1));
+	    				}
 	    			}
 	    			else{
 	    				if(timeSet.contains(start[3]))
 	    					time.add(new Concept(start[3],score));
-	    				else
-	    					q.add(new Concept(start[3],1));
+	    				else{
+	    					String buffer[] = start[3].split("_");
+	    					for(String s:buffer){
+	    						if(timeSet.contains(s)){
+	    	    					time.add(new Concept(s,score));
+	    	    					break;
+	    						}
+	    					}
+	    					if(score > 1)
+	    						q.add(new Concept(start[3],1));
+	    				}
 	    			}
 	    		}
 	    	}
@@ -342,19 +361,38 @@ public class JsonReader {
 				start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
 	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
 	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-	    		if(rel.equals("relatedto")){
+	    		if(rel.equals("relatedto") || rel.equals("hassubevent") 
+						/*|| rel.equals("hasprerequisite")*/){
 		    		if(start[2].equals("en")&&end[2].equals("en")){
 		    			if(start[3].equals(keyword)){
 		    				if(timeSet.contains(end[3]))
 		    					time.add(new Concept(end[3],c,score));
-		    				else
-		    					q.add(new Concept(end[3],c,cDepth+1));
+		    				else{
+		    					String buffer[] = end[3].split("_");
+		    					for(String s:buffer){
+		    						if(timeSet.contains(s)){
+		    	    					time.add(new Concept(s,c,score));
+		    	    					break;
+		    						}
+		    					}
+		    					if(score > 1)
+		    						q.add(new Concept(end[3],c,cDepth+1));
+		    				}
 		    			}
 		    			else{
 		    				if(timeSet.contains(start[3]))
 		    					time.add(new Concept(start[3],c,score));
-		    				else
-		    					q.add(new Concept(start[3],c,cDepth+1));
+		    				else{
+		    					String buffer[] = start[3].split("_");
+		    					for(String s:buffer){
+		    						if(timeSet.contains(s)){
+		    	    					time.add(new Concept(s,c,score));
+		    	    					break;
+		    						}
+		    					}
+		    					if(score > 1)
+		    						q.add(new Concept(start[3],c,cDepth+1));
+		    				}
 		    			}
 		    		}
 		    	}
