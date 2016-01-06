@@ -31,9 +31,11 @@ import org.json.JSONObject;
 public class JsonReader {
 	Set<String> locationSet;
 	Set<String> timeSet;
+	Set<String> prepositionsTimeSet;
 	public JsonReader(){
 		locationSet = new HashSet<String>();
 		timeSet = new HashSet<String>();
+		prepositionsTimeSet = new HashSet<String>();
 	}
 	
 	private String readAll(Reader rd) throws IOException {
@@ -51,7 +53,10 @@ public class JsonReader {
 		locationSet.addAll(input);
 		input = readFile("data\\time.txt");
 		timeSet.addAll(input);
-		}
+		input = readFile("data\\prepositionTime.txt");
+		prepositionsTimeSet.addAll(input);
+	}
+	
 	private List<String> readFile(String filename)
 	{
 	  List<String> records = new ArrayList<String>();
@@ -300,23 +305,24 @@ public class JsonReader {
 			start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
     		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
     		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-    		
-			if(rel.equals("relatedto") || rel.equals("hassubevent") 
-					/*|| rel.equals("hasprerequisite")*/){
+    		if(score < 1)
+    			continue;
+    			
+			if(rel.equals("relatedto")){
 	    		if(start[2].equals("en")&&end[2].equals("en")){
 	    			if(start[3].equals(keyword)){
 	    				if(timeSet.contains(end[3]))
 	    					time.add(new Concept(end[3],score));
 	    				else{
 	    					String buffer[] = end[3].split("_");
-	    					for(String s:buffer){
-	    						if(timeSet.contains(s)){
-	    	    					time.add(new Concept(s,score));
+	    					for(int j = 1; j < buffer.length; j++){
+	    						if(prepositionsTimeSet.contains(buffer[j-1]) 
+	    								&& timeSet.contains(buffer[j])){
+	    	    					time.add(new Concept(buffer[j],score));
 	    	    					break;
 	    						}
 	    					}
-	    					if(score > 1)
-	    						q.add(new Concept(end[3],1));
+	    					q.add(new Concept(end[3],1));
 	    				}
 	    			}
 	    			else{
@@ -324,14 +330,34 @@ public class JsonReader {
 	    					time.add(new Concept(start[3],score));
 	    				else{
 	    					String buffer[] = start[3].split("_");
-	    					for(String s:buffer){
-	    						if(timeSet.contains(s)){
-	    	    					time.add(new Concept(s,score));
+	    					for(int j = 1; j < buffer.length; j++){
+	    						if(prepositionsTimeSet.contains(buffer[j-1]) 
+	    								&& timeSet.contains(buffer[j])){
+	    	    					time.add(new Concept(buffer[j],score));
 	    	    					break;
 	    						}
 	    					}
-	    					if(score > 1)
-	    						q.add(new Concept(start[3],1));
+	    					q.add(new Concept(start[3],1));
+	    				}
+	    			}
+	    		}
+	    	}
+			
+			else if(rel.equals("hassubevent") || rel.equals("hasprerequisite")){
+	    		if(start[2].equals("en")&&end[2].equals("en")){
+	    			if(start[3].equals(keyword)){
+	    				if(timeSet.contains(end[3]))
+	    					time.add(new Concept(end[3],score));
+	    				else{
+	    					String buffer[] = end[3].split("_");
+	    					for(int j = 1; j < buffer.length; j++){
+	    						if(prepositionsTimeSet.contains(buffer[j-1]) 
+	    								&& timeSet.contains(buffer[j])){
+	    	    					time.add(new Concept(buffer[j],score));
+	    	    					break;
+	    						}
+	    					}
+	    					q.add(new Concept(end[3],1));
 	    				}
 	    			}
 	    		}
@@ -361,22 +387,23 @@ public class JsonReader {
 				start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
 	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
 	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-	    		if(rel.equals("relatedto") || rel.equals("hassubevent") 
-						/*|| rel.equals("hasprerequisite")*/){
+	    		if(score < 1)
+	    			continue;
+	    		if(rel.equals("relatedto")){
 		    		if(start[2].equals("en")&&end[2].equals("en")){
 		    			if(start[3].equals(keyword)){
 		    				if(timeSet.contains(end[3]))
 		    					time.add(new Concept(end[3],c,score));
 		    				else{
 		    					String buffer[] = end[3].split("_");
-		    					for(String s:buffer){
-		    						if(timeSet.contains(s)){
-		    	    					time.add(new Concept(s,c,score));
+		    					for(int j = 1; j < buffer.length; j++){
+		    						if(prepositionsTimeSet.contains(buffer[j-1]) 
+		    								&& timeSet.contains(buffer[j])){
+		    	    					time.add(new Concept(buffer[j],score));
 		    	    					break;
 		    						}
 		    					}
-		    					if(score > 1)
-		    						q.add(new Concept(end[3],c,cDepth+1));
+		    					q.add(new Concept(end[3],c,cDepth+1));
 		    				}
 		    			}
 		    			else{
@@ -384,14 +411,34 @@ public class JsonReader {
 		    					time.add(new Concept(start[3],c,score));
 		    				else{
 		    					String buffer[] = start[3].split("_");
-		    					for(String s:buffer){
-		    						if(timeSet.contains(s)){
-		    	    					time.add(new Concept(s,c,score));
+		    					for(int j = 1; j < buffer.length; j++){
+		    						if(prepositionsTimeSet.contains(buffer[j-1]) 
+		    								&& timeSet.contains(buffer[j])){
+		    	    					time.add(new Concept(buffer[j],score));
 		    	    					break;
 		    						}
 		    					}
-		    					if(score > 1)
-		    						q.add(new Concept(start[3],c,cDepth+1));
+		    					q.add(new Concept(start[3],c,cDepth+1));
+		    				}
+		    			}
+		    		}
+		    	}
+	    		
+	    		if(rel.equals("hassubevent") || rel.equals("hasprerequisite")){
+		    		if(start[2].equals("en")&&end[2].equals("en")){
+		    			if(start[3].equals(keyword)){
+		    				if(timeSet.contains(end[3]))
+		    					time.add(new Concept(end[3],c,score));
+		    				else{
+		    					String buffer[] = end[3].split("_");
+		    					for(int j = 1; j < buffer.length; j++){
+		    						if(prepositionsTimeSet.contains(buffer[j-1]) 
+		    								&& timeSet.contains(buffer[j])){
+		    	    					time.add(new Concept(buffer[j],score));
+		    	    					break;
+		    						}
+		    					}
+		    					q.add(new Concept(end[3],c,cDepth+1));
 		    				}
 		    			}
 		    		}
@@ -681,5 +728,7 @@ public class JsonReader {
 		
 		return false;
 	}
+
+	
 }
 

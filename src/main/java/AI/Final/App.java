@@ -38,7 +38,7 @@ public class App
 						while(cc.getParent()!=null){
 							cc = cc.getParent();
 							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
-						}
+						}			
 						System.out.println();
 					}
 	            	
