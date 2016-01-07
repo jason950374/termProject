@@ -36,7 +36,7 @@ public class App
 //        	modelIn = new FileInputStream("en-pos-maxent.bin");
 //			POSModel posModel = new POSModel(modelIn);
 //			POSTaggerME tagger = new POSTaggerME(posModel);
-//			String ss = "Chicken";
+//			String ss = "Singer is a person";
 //	    	sent =	WhitespaceTokenizer.INSTANCE.tokenize(ss);
 //			tags = tagger.tag(sent);
 //			for(String s:tags){
@@ -63,7 +63,14 @@ public class App
 	            	
 					break;
 				case "why":
-					
+					temp = reader.searchWhy(term[1]);
+					for(Concept cc:temp){
+						System.out.println(cc.getConcept()+" "+cc.getScore());
+						while(cc.getParent()!=null){
+							cc = cc.getParent();
+							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+						}
+					}
 					break;
 				case "what":
 					temp = reader.searchWhat(term[1]);
@@ -87,6 +94,14 @@ public class App
 	            		System.out.println(singleWord.get(0));
 					break;
 				case "who":
+					temp = reader.searchWho(term[1]);
+					for(Concept cc:temp){
+						System.out.println(cc.getConcept()+" "+cc.getScore());
+						while(cc.getParent()!=null){
+							cc = cc.getParent();
+							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+						}
+					}
 					break;
 				case "how":
 					break;
