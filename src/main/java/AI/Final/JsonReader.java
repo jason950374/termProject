@@ -269,6 +269,126 @@ public class JsonReader {
 		return null;
 	}
 	
+	public List<Concept> searchWhy(String keyword) throws IOException, JSONException{
+		JSONObject json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
+		Queue<Concept> q = new LinkedList<Concept>();
+		Set<String> used = new HashSet<String>();
+		List<Concept> reason = new LinkedList<Concept>();
+		int num = (Integer)json.get("numFound");
+		int cDepth = 0;
+		Concept c = null;
+		Concept tempc = null;
+		String rel = null;
+		String start[];
+		String end[];
+		String surfaceText;
+		double score;
+		for(int i=0;i<num;i++){
+			c = null;
+			rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
+			start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
+    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
+    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
+    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
+    		if(!(start[2].equals("en")&&end[2].equals("en")))
+    			continue;	
+    		if(rel.equals("motivatedbygoal") || rel.equals("causes")){
+    			if(start[3].equals(keyword)){
+    				c = new Concept(end[3],rel,score);
+    			}
+	    	}
+	    	else if(rel.equals("relatedto")){
+    			if(start[3].equals(keyword)){
+    				q.add(new Concept(end[3],rel,1));
+    			}
+    			else{
+    				q.add(new Concept(start[3],rel,1));
+    			}
+	    	}
+    		if(c!=null){
+				for(Concept tmp:reason){
+    				if(c.getConcept().equals(tmp.getConcept())){
+    					if(tmp.getRel().contains(c.getRel().get(0))){
+    						c = null;
+    					}
+    					else{
+    						c.setScore(c.getScore()+tmp.getScore());
+    						c.addRel(tmp.getRel());
+    						reason.remove(tmp);
+    					}
+    					break;
+    				}
+    			}
+				if(c!=null)
+					reason.add(c);
+			}
+		}
+		
+		used.add(keyword);
+		while(!q.isEmpty()){
+			c = q.remove();
+			cDepth = c.getDepth();
+			tempc = c;
+			keyword = c.getConcept();
+			if(cDepth>3||used.contains(keyword))
+				continue;
+			json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
+			num = (Integer)json.get("numFound");
+			for(int i=0;i<num;i++){
+				c = null;
+				rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
+				start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
+	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
+	    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
+	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
+	    		if(!(start[2].equals("en")&&end[2].equals("en")))
+	    			continue;	
+	    		if(rel.equals("motivatedbygoal") || rel.equals("causes")){
+	    			if(start[3].equals(keyword)){
+	    				c = new Concept(end[3],rel,tempc,score);
+	    			}
+		    	}
+		    	else if(rel.equals("relatedto")){
+	    			if(start[3].equals(keyword)){
+	    				q.add(new Concept(end[3],rel,tempc,cDepth+1));
+	    			}
+	    			else{
+	    				q.add(new Concept(start[3],rel,tempc,cDepth+1));
+	    			}
+		    	}
+	    		
+	    		if(c!=null){
+    				for(Concept tmp:reason){
+	    				if(c.getConcept().equals(tmp.getConcept())){
+	    					if(tmp.getRel().contains(c.getRel().get(0))){
+	    						c = null;
+	    					}
+	    					else{
+	    						c.setScore(c.getScore()+tmp.getScore());
+	    						c.addRel(tmp.getRel());
+	    						reason.remove(tmp);
+	    					}
+	    					break;
+	    				}
+	    			}
+    				if(c!=null)
+    					reason.add(c);
+    			}
+			}
+			if(!reason.isEmpty()){
+				try {
+					Collections.sort(reason, new ConceptCmp());
+				} catch (Exception e) {
+					// TODO: handle exception
+				}
+		        return reason;
+			}
+			used.add(keyword);
+		}
+		
+		return reason;
+	}
+	
 	public List<Concept> searchWhat(String keyword) throws IOException, JSONException{
 		JSONObject json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
 		Queue<Concept> q = new LinkedList<Concept>();
@@ -282,7 +402,6 @@ public class JsonReader {
 		String start[];
 		String end[];
 		String surfaceText;
-		String buffer[];
 		double score;
 		for(int i=0;i<num;i++){
 			c = null;
@@ -301,30 +420,13 @@ public class JsonReader {
     				else{
     					c = new Concept(end[3],rel,score);
     				}
-    				if(c!=null){
-	    				for(Concept tmp:what){
-		    				if(c.getConcept().equals(tmp.getConcept())){
-		    					if(tmp.getRel().contains(c.getRel().get(0))){
-		    						c = null;
-		    					}
-		    					else{
-		    						c.setScore(c.getScore()+tmp.getScore());
-		    						c.addRel(tmp.getRel());
-			    					what.remove(tmp);
-		    					}
-		    					break;
-		    				}
-		    			}
-	    				if(c!=null)
-	    					what.add(c);
-	    			}
     			}
     		
 	    	}
     		else if(rel.equals("definedas")){
     			if(start[3].equals(keyword)){
     				c = new Concept(end[3],rel,score);
-    				}
+    			}
     			if(c!=null){
     				for(Concept tmp:what){
 	    				if(c.getConcept().equals(tmp.getConcept())){
@@ -342,7 +444,7 @@ public class JsonReader {
     				if(c!=null)
     					what.add(c);
     			}
-    			}
+    		}
 	    	else if(rel.equals("relatedto")){
     			if(start[3].equals(keyword)){
     				q.add(new Concept(end[3],rel,1));
@@ -350,8 +452,24 @@ public class JsonReader {
     			else{
     				q.add(new Concept(start[3],rel,1));
     			}
-    		
 	    	}
+    		if(c!=null){
+				for(Concept tmp:what){
+    				if(c.getConcept().equals(tmp.getConcept())){
+    					if(tmp.getRel().contains(c.getRel().get(0))){
+    						c = null;
+    					}
+    					else{
+    						c.setScore(c.getScore()+tmp.getScore());
+    						c.addRel(tmp.getRel());
+	    					what.remove(tmp);
+    					}
+    					break;
+    				}
+    			}
+				if(c!=null)
+					what.add(c);
+			}
 		}
 		if(!what.isEmpty()){
 			try {
@@ -388,23 +506,6 @@ public class JsonReader {
 	    				else{
 	    					c = new Concept(end[3],rel,tempc,score);
 	    				}
-	    				if(c!=null){
-		    				for(Concept tmp:what){
-			    				if(c.getConcept().equals(tmp.getConcept())){
-			    					if(tmp.getRel().contains(c.getRel().get(0))){
-			    						c = null;
-			    					}
-			    					else{
-			    						c.setScore(c.getScore()+tmp.getScore());
-			    						c.addRel(tmp.getRel());
-				    					what.remove(tmp);
-			    					}
-			    					break;
-			    				}
-			    			}
-		    				if(c!=null)
-		    					what.add(c);
-		    			}
 	    			}
 	    		
 		    	}
@@ -412,23 +513,6 @@ public class JsonReader {
 	    			if(start[3].equals(keyword)){
 	    				c = new Concept(end[3],rel,tempc,score);
 	    				}
-	    			if(c!=null){
-	    				for(Concept tmp:what){
-		    				if(c.getConcept().equals(tmp.getConcept())){
-		    					if(tmp.getRel().contains(c.getRel().get(0))){
-		    						c = null;
-		    					}
-		    					else{
-		    						c.setScore(c.getScore()+tmp.getScore());
-		    						c.addRel(tmp.getRel());
-			    					what.remove(tmp);
-		    					}
-		    					break;
-		    				}
-		    			}
-	    				if(c!=null)
-	    					what.add(c);
-	    			}
 	    			}
 		    	else if(rel.equals("relatedto")){
 	    			if(start[3].equals(keyword)){
@@ -437,8 +521,24 @@ public class JsonReader {
 	    			else{
 	    				q.add(new Concept(start[3],rel,tempc,cDepth+1));
 	    			}
-	    		
 		    	}
+	    		if(c!=null){
+    				for(Concept tmp:what){
+	    				if(c.getConcept().equals(tmp.getConcept())){
+	    					if(tmp.getRel().contains(c.getRel().get(0))){
+	    						c = null;
+	    					}
+	    					else{
+	    						c.setScore(c.getScore()+tmp.getScore());
+	    						c.addRel(tmp.getRel());
+		    					what.remove(tmp);
+	    					}
+	    					break;
+	    				}
+	    			}
+    				if(c!=null)
+    					what.add(c);
+    			}
 			}
 			if(!what.isEmpty()){
 				try {
@@ -450,7 +550,6 @@ public class JsonReader {
 			}
 			used.add(keyword);
 		}
-		
 		
 		return null;
 	}
@@ -894,6 +993,5 @@ public class JsonReader {
 		return false;
 	}
 
-	
 }
 
