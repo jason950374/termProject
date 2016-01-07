@@ -611,9 +611,8 @@ public class JsonReader {
     		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
     		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
     		
-    		if(!(start[2].equals("en")&&end[2].equals("en")))
+    		if(!(start[2].equals("en")&&end[2].equals("en")) || surfaceText.equals("null"))
     			continue;
-    		
     		if(rel.equals("instanceof") & !haveVerb){
     			if(end[3].equals(keyword)){
     				c = new Concept(start[3],rel,score);
@@ -699,7 +698,7 @@ public class JsonReader {
 	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
 	    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
 	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-	    		if(!(start[2].equals("en")&&end[2].equals("en")))
+	    		if(!(start[2].equals("en")&&end[2].equals("en")) || surfaceText.equals("null"))
 	    			continue;	
 	    		if(rel.equals("instanceof") & !haveVerb){
 	    			if(end[3].equals(keyword)){
@@ -793,7 +792,7 @@ public class JsonReader {
     		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
     		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
     		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-    		if(!(start[2].equals("en")&&end[2].equals("en")))
+    		if(!(start[2].equals("en")&&end[2].equals("en")) || surfaceText.equals("null"))
     			continue;
     		
     		if(rel.equals("isa")){
@@ -867,7 +866,7 @@ public class JsonReader {
 	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
 	    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
 	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-	    		if(!(start[2].equals("en")&&end[2].equals("en")))
+	    		if(!(start[2].equals("en")&&end[2].equals("en")) || surfaceText.equals("null"))
 	    			continue;	
 	    		if(rel.equals("isa")){
 	    			if(start[3].equals(keyword)){
