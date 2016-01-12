@@ -47,63 +47,109 @@ public class App
         		term = keyword.split(" ");
         		switch (term[0].toLowerCase()) {
 				case "where":
-					c = reader.searchWhere(term[1]);
-	            	System.out.println(c.getConcept());
+					temp = reader.searchWhere(term[1]);
+					if(temp==null)
+						temp = reader.searchAnything(term[1]);
+					if(temp!=null)
+						System.out.println(temp.get(0).getConcept());
+					else
+						System.out.println("I don't know.");
 					break;
 				case "when":
 					temp = reader.searchWhen(term[1]);
-					for(Concept cc:temp){
-						System.out.print(cc.getConcept()+" "+cc.getScore());
-						while(cc.getParent()!=null){
-							cc = cc.getParent();
-							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
-						}
-						System.out.println();
-					}
+					if(temp==null)
+						temp = reader.searchWhen2(term[1]);
+					if(temp==null)
+						temp = reader.searchAnything(term[1]);
+					if(temp!=null)
+						System.out.println(temp.get(0).getConcept());
+					else
+						System.out.println("I don't know.");
+//					for(Concept cc:temp){
+//						System.out.print(cc.getConcept()+" "+cc.getScore());
+////						while(cc.getParent()!=null){
+////							cc = cc.getParent();
+////							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+////						}
+//						System.out.println();
+//					}
 	            	
 					break;
 				case "why":
 					temp = reader.searchWhy(term[1]);
-					for(Concept cc:temp){
-						System.out.println(cc.getConcept()+" "+cc.getScore());
-						while(cc.getParent()!=null){
-							cc = cc.getParent();
-							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
-						}
-					}
+					if(temp==null)
+						temp = reader.searchAnything(term[1]);
+					if(temp!=null)
+						System.out.println(temp.get(0).getConcept());
+					else
+						System.out.println("I don't know.");
+//					for(Concept cc:temp){
+//						System.out.println(cc.getConcept()+" "+cc.getScore());
+////						while(cc.getParent()!=null){
+////							cc = cc.getParent();
+////							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+////						}
+//					}
 					break;
 				case "what":
-					temp = reader.searchWhat(term[1]);
 					List<Concept> singleWord = new LinkedList<Concept>();
 					boolean print = false;
-					for(Concept cc:temp){
-//						if(cc.getConcept().contains("_")){
-							System.out.println(cc.getConcept()+" "+cc.getScore());
-//							print = true;
-//							break;
-//						}
-//						else{	
-//							singleWord.add(cc);
-//						}
-//						while(cc.getParent()!=null){
-//							cc = cc.getParent();
-//							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
-//						}
+					temp = reader.searchWhat(term[1]);
+					if(temp==null)
+						temp = reader.searchAnything(term[1]);
+					if(temp==null)
+						System.out.println("I don't know.");
+					else{
+						for(Concept cc:temp){
+							if(cc.getConcept().contains("_")){
+								System.out.println(cc.getConcept());
+								print = true;
+								break;
+							}
+							else{	
+								singleWord.add(cc);
+							}
+//							while(cc.getParent()!=null){
+//								cc = cc.getParent();
+//								System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+//							}
+						}
+		            	if(!print&&!singleWord.isEmpty())
+		            		System.out.println(singleWord.get(0));
 					}
-	            	if(!print&&!singleWord.isEmpty())
-	            		System.out.println(singleWord.get(0));
 					break;
 				case "who":
 					temp = reader.searchWho(term[1]);
-					for(Concept cc:temp){
-						System.out.println(cc.getConcept()+" "+cc.getScore());
-						while(cc.getParent()!=null){
-							cc = cc.getParent();
-							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
-						}
-					}
+					if(temp==null)
+						temp = reader.searchAnything(term[1]);
+					if(temp!=null)
+						System.out.println(temp.get(0).getConcept());
+					else
+						System.out.println("I don't know.");
+//					for(Concept cc:temp){
+//						System.out.println(cc.getConcept()+" "+cc.getScore());
+////						while(cc.getParent()!=null){
+////							cc = cc.getParent();
+////							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+////						}
+//					}
 					break;
 				case "how":
+					temp = reader.searchHow(term[1]);
+					if(temp==null)
+						temp = reader.searchAnything(term[1]);
+					if(temp!=null)
+						System.out.println(temp.get(0).getConcept());
+					else
+						System.out.println("I don't know.");
+//					for(Concept cc:temp){
+//						System.out.print(cc.getConcept()+" "+cc.getScore());
+////						while(cc.getParent()!=null){
+////							cc = cc.getParent();
+////							System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+////						}
+//						System.out.println();
+//					}
 					break;
 				case "capableof":
 					YesNo = reader.searchCapableOf(term[1], term[2]);

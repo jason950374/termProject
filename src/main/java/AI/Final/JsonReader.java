@@ -108,7 +108,62 @@ public class JsonReader {
 	    }
   	}
 	
-	public Concept searchWhere(String keyword) throws IOException, JSONException{
+	public List<Concept> searchAnything(String keyword) throws IOException, JSONException{
+		JSONObject json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
+		List<Concept> anything = new LinkedList<Concept>();
+		int num = (Integer)json.get("numFound");
+		Concept c = null;
+		String rel = null;
+		String start[];
+		String end[];
+		String surfaceText;
+		double score;
+		for(int i=0;i<num;i++){
+			c = null;
+			rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
+			start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
+    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
+    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString().toLowerCase();
+    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
+    		if(!(start[2].equals("en")&&end[2].equals("en")))
+    			continue;
+    		if(start[3].equals(keyword)){
+				c = new Concept(end[3],rel,score);
+			}
+			else{
+				c = new Concept(start[3],rel,score);
+			}
+    		if(c!=null){
+    			if(surfaceText.contains("something")||surfaceText.contains("sometimes")
+    					||surfaceText.contains("somewhere")||surfaceText.contains("when")
+    					||surfaceText.contains("while")||surfaceText.contains("might")
+    					||surfaceText.equals("null"))
+    				c.setScore(c.getScore()*0);
+				for(Concept tmp:anything){
+    				if(c.getConcept().equals(tmp.getConcept())){
+    					if(tmp.getRel().contains(c.getRel().get(0))){
+    						c = null;
+    					}
+    					else{
+    						c.setScore(c.getScore()+tmp.getScore());
+    						c.addRel(tmp.getRel());
+    						anything.remove(tmp);
+    					}
+    					break;
+    				}
+    			}
+				if(c!=null)
+					anything.add(c);
+			}
+		}
+		
+		if(!anything.isEmpty())
+			return anything;
+		
+		return null;
+	}
+	
+	public List<Concept> searchWhere(String keyword) throws IOException, JSONException{
 		JSONObject json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
 		Queue<Concept> q = new LinkedList<Concept>();
 		Set<String> used = new HashSet<String>();
@@ -195,7 +250,7 @@ public class JsonReader {
 			} catch (Exception e) {
 				// TODO: handle exception
 			}
-	        return location.get(0);
+	        return location;
 		}
 		used.add(keyword);
 		while(!q.isEmpty()){
@@ -277,7 +332,7 @@ public class JsonReader {
 				} catch (Exception e) {
 					// TODO: handle exception
 				}
-		        return location.get(0);
+		        return location;
 			}
 			used.add(keyword);
 		}
@@ -305,18 +360,18 @@ public class JsonReader {
 			rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
 			start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
     		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
-    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
+    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString().toLowerCase();
     		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
     		if(!(start[2].equals("en")&&end[2].equals("en")))
     			continue;
     		if(rel.equals("motivatedbygoal")){
     			if(start[3].equals(keyword)){
-    				c = new Concept(end[3],rel,score);
+    				c = new Concept(end[3],rel,tempc,score*1.2);
     			}
 	    	}
-    		else if(rel.equals("motivatedbygoal") || rel.equals("causes")){
-    			if(end[3].equals(keyword)){
-    				c = new Concept(start[3],rel,score);
+    		if(rel.equals("causes")){
+    			if(start[3].equals(keyword)){
+    				c = new Concept(end[3],rel,tempc,score);
     			}
 	    	}
 	    	else if(rel.equals("relatedto")){
@@ -328,6 +383,9 @@ public class JsonReader {
     			}
 	    	}
     		if(c!=null){
+    			if(surfaceText.contains("sometimes") 
+    					|| surfaceText.contains("might"))
+    				c.setScore(c.getScore()*0.7);
 				for(Concept tmp:reason){
     				if(c.getConcept().equals(tmp.getConcept())){
     					if(tmp.getRel().contains(c.getRel().get(0))){
@@ -365,7 +423,12 @@ public class JsonReader {
 	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
 	    		if(!(start[2].equals("en")&&end[2].equals("en")))
 	    			continue;	
-	    		if(rel.equals("motivatedbygoal") || rel.equals("causes")){
+	    		if(rel.equals("motivatedbygoal")){
+	    			if(start[3].equals(keyword)){
+	    				c = new Concept(end[3],rel,tempc,score*1.2);
+	    			}
+		    	}
+	    		if(rel.equals("causes")){
 	    			if(start[3].equals(keyword)){
 	    				c = new Concept(end[3],rel,tempc,score);
 	    			}
@@ -380,6 +443,9 @@ public class JsonReader {
 		    	}
 	    		
 	    		if(c!=null){
+	    			if(surfaceText.contains("sometimes")
+	    					|| surfaceText.contains("might"))
+	    				c.setScore(c.getScore()*0.7);
     				for(Concept tmp:reason){
 	    				if(c.getConcept().equals(tmp.getConcept())){
 	    					if(tmp.getRel().contains(c.getRel().get(0))){
@@ -926,6 +992,160 @@ public class JsonReader {
 		return who;
 	}
 	
+	public List<Concept> searchHow(String keyword) throws IOException, JSONException{
+		JSONObject json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
+		Queue<Concept> q = new LinkedList<Concept>();
+		Set<String> used = new HashSet<String>();
+		List<Concept> how = new LinkedList<Concept>();
+		int num = (Integer)json.get("numFound");
+		int cDepth = 0;
+		Concept c = null;
+		Concept tempc = null;
+		String rel = null;
+		String start[];
+		String end[];
+		String surfaceText;
+		double score;
+		for(int i=0;i<num;i++){
+			c = null;
+			rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
+			start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
+    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
+    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString().toLowerCase();
+    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
+    		if(!(start[2].equals("en")&&end[2].equals("en")))
+    			continue;	
+    		if(rel.equals("usedfor")){
+    			if(end[3].equals(keyword)){
+    				if(!(surfaceText.contains("something")||surfaceText.contains("sometimes")
+    						||surfaceText.contains("somewhere")||surfaceText.contains("when")
+    						||surfaceText.contains("while"))){
+    					c = new Concept(start[3],rel,score);
+    				}
+    			}
+    		
+	    	}
+    		else if(rel.equals("hasprerequisite")){
+    			if(start[3].equals(keyword)){
+    				if(!(surfaceText.contains("something")||surfaceText.contains("sometimes")
+    						||surfaceText.contains("somewhere")||surfaceText.contains("when")
+    						||surfaceText.contains("while"))){
+    					c = new Concept(end[3],rel,score);
+    				}
+    			}
+	    	}
+	    	else if(rel.equals("relatedto")){
+    			if(start[3].equals(keyword)){
+    				q.add(new Concept(end[3],rel,1));
+    			}
+    			else{
+    				q.add(new Concept(start[3],rel,1));
+    			}
+	    	}
+    		if(c!=null){
+				for(Concept tmp:how){
+    				if(c.getConcept().equals(tmp.getConcept())){
+    					if(tmp.getRel().contains(c.getRel().get(0))){
+    						c = null;
+    					}
+    					else{
+    						c.setScore(c.getScore()+tmp.getScore());
+    						c.addRel(tmp.getRel());
+	    					how.remove(tmp);
+    					}
+    					break;
+    				}
+    			}
+				if(c!=null)
+					how.add(c);
+			}
+		}
+		if(!how.isEmpty()){
+			try {
+				Collections.sort(how, new ConceptCmp());
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+	        return how;
+		}
+		used.add(keyword);
+		while(!q.isEmpty()){
+			c = q.remove();
+			cDepth = c.getDepth();
+			tempc = c;
+			keyword = c.getConcept();
+			if(cDepth>3||used.contains(keyword))
+				continue;
+			json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
+			num = (Integer)json.get("numFound");
+			for(int i=0;i<num;i++){
+				c = null;
+				rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
+				start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
+	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
+	    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
+	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
+	    		if(!(start[2].equals("en")&&end[2].equals("en")))
+	    			continue;	
+	    		if(rel.equals("usedfor")){
+	    			if(end[3].equals(keyword)){
+	    				if(!(surfaceText.contains("something")||surfaceText.contains("sometimes")
+	    						||surfaceText.contains("somewhere")||surfaceText.contains("when")
+	    						||surfaceText.contains("while"))){
+	    					c = new Concept(start[3],rel,score);
+	    				}
+	    			}
+	    		
+		    	}
+	    		else if(rel.equals("hasprerequisite")){
+	    			if(start[3].equals(keyword)){
+	    				if(!(surfaceText.contains("something")||surfaceText.contains("sometimes")
+	    						||surfaceText.contains("somewhere")||surfaceText.contains("when")
+	    						||surfaceText.contains("while"))){
+	    					c = new Concept(end[3],rel,score);
+	    				}
+	    			}
+		    	}
+		    	else if(rel.equals("relatedto")){
+	    			if(start[3].equals(keyword)){
+	    				q.add(new Concept(end[3],rel,tempc,cDepth+1));
+	    			}
+	    			else{
+	    				q.add(new Concept(start[3],rel,tempc,cDepth+1));
+	    			}
+		    	}
+	    		if(c!=null){
+    				for(Concept tmp:how){
+	    				if(c.getConcept().equals(tmp.getConcept())){
+	    					if(tmp.getRel().contains(c.getRel().get(0))){
+	    						c = null;
+	    					}
+	    					else{
+	    						c.setScore(c.getScore()+tmp.getScore());
+	    						c.addRel(tmp.getRel());
+		    					how.remove(tmp);
+	    					}
+	    					break;
+	    				}
+	    			}
+    				if(c!=null)
+    					how.add(c);
+    			}
+			}
+			if(!how.isEmpty()){
+				try {
+					Collections.sort(how, new ConceptCmp());
+				} catch (Exception e) {
+					// TODO: handle exception
+				}
+		        return how;
+			}
+			used.add(keyword);
+		}
+		
+		return null;
+	}
+	
 	public List<Concept> searchWhen(String keyword) throws IOException, JSONException{
 		JSONObject json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
 		Queue<Concept> q = new LinkedList<Concept>();
@@ -934,6 +1154,7 @@ public class JsonReader {
 		int num = (Integer)json.get("numFound");
 		int cDepth = 0;
 		Concept c;
+		Concept tempc;
 		String rel = null;
 		String start[];
 		String end[];
@@ -944,20 +1165,20 @@ public class JsonReader {
 			start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
     		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
     		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-    		if(score < 1)
-    			continue;
+//    		if(score < 1)
+//    			continue;
     		if(!(start[2].equals("en")&&end[2].equals("en")))
     			continue;	
 			if(rel.equals("relatedto")){
     			if(start[3].equals(keyword)){
     				if(timeSet.contains(end[3]))
-    					time.add(new Concept(end[3],rel,score));
+    					c = new Concept(end[3],rel,score);
     				else{
     					String buffer[] = end[3].split("_");
     					for(int j = 1; j < buffer.length; j++){
     						if(prepositionsTimeSet.contains(buffer[j-1]) 
     								&& timeSet.contains(buffer[j])){
-    	    					time.add(new Concept(buffer[j],rel,score));
+    	    					c = new Concept(buffer[j],rel,score);
     	    					break;
     						}
     					}
@@ -966,13 +1187,13 @@ public class JsonReader {
     			}
     			else{
     				if(timeSet.contains(start[3]))
-    					time.add(new Concept(start[3],rel,score));
+    					c = new Concept(start[3],rel,score);
     				else{
     					String buffer[] = start[3].split("_");
     					for(int j = 1; j < buffer.length; j++){
     						if(prepositionsTimeSet.contains(buffer[j-1]) 
     								&& timeSet.contains(buffer[j])){
-    	    					time.add(new Concept(buffer[j],rel,score));
+    	    					c = new Concept(buffer[j],rel,score);
     	    					break;
     						}
     					}
@@ -984,21 +1205,38 @@ public class JsonReader {
 			else if(rel.equals("hassubevent") || rel.equals("hasprerequisite")){
     			if(start[3].equals(keyword)){
     				if(timeSet.contains(end[3]))
-    					time.add(new Concept(end[3],rel,score));
+    					c = new Concept(end[3],rel,score);
     				else{
     					String buffer[] = end[3].split("_");
     					for(int j = 1; j < buffer.length; j++){
     						if(prepositionsTimeSet.contains(buffer[j-1]) 
     								&& timeSet.contains(buffer[j])){
-    	    					time.add(new Concept(buffer[j],rel,score));
+    	    					c = new Concept(buffer[j],rel,score);
     	    					break;
     						}
     					}
-    					q.add(new Concept(end[3],rel,1));
+//    					q.add(new Concept(end[3],rel,1));
     				}
     			}
     		
 	    	}
+			if(c!=null){
+				for(Concept tmp:time){
+    				if(c.getConcept().equals(tmp.getConcept())){
+    					if(tmp.getRel().contains(c.getRel().get(0))){
+    						c = null;
+    					}
+    					else{
+    						c.setScore(c.getScore()+tmp.getScore());
+    						c.addRel(tmp.getRel());
+	    					time.remove(tmp);
+    					}
+    					break;
+    				}
+    			}
+				if(c!=null)
+					time.add(c);
+			}
 		}
 		if(!time.isEmpty()){
 			try {
@@ -1009,9 +1247,9 @@ public class JsonReader {
 	        return time;
 		}
 		used.add(keyword);
-		
 		while(!q.isEmpty()){
 			c = q.remove();
+			tempc = c;
 			keyword = c.getConcept();
 			cDepth = c.getDepth();
 			if(cDepth>3||used.contains(keyword))
@@ -1019,67 +1257,84 @@ public class JsonReader {
 			json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
 			num = (Integer)json.get("numFound");
 			for(int i=0;i<num;i++){
-//				c = null;
+				c = null;
 				rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
 				start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
 	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
 	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
-	    		if(score < 1)
-	    			continue;
+//	    		if(score < 1)
+//	    			continue;
 	    		if(!(start[2].equals("en")&&end[2].equals("en")))
 	    			continue;
 	    		if(rel.equals("relatedto")){
 	    			if(start[3].equals(keyword)){
 	    				if(timeSet.contains(end[3]))
-	    					time.add(new Concept(end[3],rel,c,score));
+	    					c = new Concept(end[3],rel,tempc,score);
 	    				else{
 	    					String buffer[] = end[3].split("_");
 	    					for(int j = 1; j < buffer.length; j++){
 	    						if(prepositionsTimeSet.contains(buffer[j-1]) 
 	    								&& timeSet.contains(buffer[j])){
-	    	    					time.add(new Concept(buffer[j],rel,score));
+	    	    					c = new Concept(buffer[j],rel,tempc,score);
 	    	    					break;
 	    						}
 	    					}
-	    					q.add(new Concept(end[3],rel,c,cDepth+1));
+	    					q.add(new Concept(end[3],rel,tempc,cDepth+1));
 	    				}
 	    			}
 	    			else{
 	    				if(timeSet.contains(start[3]))
-	    					time.add(new Concept(start[3],rel,c,score));
+	    					c = new Concept(start[3],rel,tempc,score);
 	    				else{
 	    					String buffer[] = start[3].split("_");
 	    					for(int j = 1; j < buffer.length; j++){
 	    						if(prepositionsTimeSet.contains(buffer[j-1]) 
 	    								&& timeSet.contains(buffer[j])){
-	    	    					time.add(new Concept(buffer[j],rel,score));
+	    	    					c = new Concept(buffer[j],rel,tempc,score);
 	    	    					break;
 	    						}
 	    					}
-	    					q.add(new Concept(start[3],rel,c,cDepth+1));
+	    					q.add(new Concept(start[3],rel,tempc,cDepth+1));
 	    				}
 	    			}
 	    		
 		    	}
 	    		
-	    		if(rel.equals("hassubevent") || rel.equals("hasprerequisite")){
+	    		else if(rel.equals("hassubevent") || rel.equals("hasprerequisite")){
 	    			if(start[3].equals(keyword)){
 	    				if(timeSet.contains(end[3]))
-	    					time.add(new Concept(end[3],rel,c,score));
+	    					c = new Concept(end[3],rel,tempc,score);
 	    				else{
 	    					String buffer[] = end[3].split("_");
 	    					for(int j = 1; j < buffer.length; j++){
 	    						if(prepositionsTimeSet.contains(buffer[j-1]) 
 	    								&& timeSet.contains(buffer[j])){
-	    	    					time.add(new Concept(buffer[j],rel,score));
+	    	    					c = new Concept(buffer[j],rel,tempc,score);
 	    	    					break;
 	    						}
 	    					}
-	    					q.add(new Concept(end[3],rel,c,cDepth+1));
+//	    					q.add(new Concept(end[3],rel,tempc,cDepth+1));
 	    				}
 	    			}
 	    		
 		    	}
+	    		if(c!=null){
+					for(Concept tmp:time){
+	    				if(c.getConcept().equals(tmp.getConcept())){
+	    					if(tmp.getRel().contains(c.getRel().get(0))){
+	    						c = null;
+	    					}
+	    					else{
+	    						c.setScore(c.getScore()+tmp.getScore());
+	    						c.addRel(tmp.getRel());
+		    					time.remove(tmp);
+	    					}
+	    					break;
+	    				}
+	    			}
+					if(c!=null)
+						time.add(c);
+				}
 			}
 			if(!time.isEmpty()){
 				try {
@@ -1088,6 +1343,144 @@ public class JsonReader {
 					// TODO: handle exception
 				}
 		        return time;
+			}
+			used.add(keyword);
+		}
+		
+		
+		return null;
+	}
+	
+	public List<Concept> searchWhen2(String keyword) throws IOException, JSONException{
+		JSONObject json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
+		Queue<Concept> q = new LinkedList<Concept>();
+		Set<String> used = new HashSet<String>();
+		List<Concept> when = new LinkedList<Concept>();
+		int num = (Integer)json.get("numFound");
+		int cDepth = 0;
+		Concept c = null;
+		Concept tempc = null;
+		String rel = null;
+		String start[];
+		String end[];
+		String surfaceText;
+		double score;
+		for(int i=0;i<num;i++){
+			c = null;
+			rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
+			start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
+    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
+    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
+    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
+    		if(!(start[2].equals("en")&&end[2].equals("en")))
+    			continue;	
+    		if(rel.equals("hasprerequisite")){
+    			if(end[3].equals(keyword)){
+    				c = new Concept(start[3],rel,score*1.2);
+    			}
+    		
+	    	}
+    		else if(rel.equals("hassubevent")){
+    			if(end[3].equals(keyword)){
+    				c = new Concept(start[3],rel,score);
+    			}
+	    	}
+	    	else if(rel.equals("relatedto")||rel.equals("synonym")){
+    			if(start[3].equals(keyword)){
+    				q.add(new Concept(end[3],rel,1));
+    			}
+    			else{
+    				q.add(new Concept(start[3],rel,1));
+    			}
+	    	}
+    		if(c!=null){
+				for(Concept tmp:when){
+    				if(c.getConcept().equals(tmp.getConcept())){
+    					if(tmp.getRel().contains(c.getRel().get(0))){
+    						c = null;
+    					}
+    					else{
+    						c.setScore(c.getScore()+tmp.getScore());
+    						c.addRel(tmp.getRel());
+	    					when.remove(tmp);
+    					}
+    					break;
+    				}
+    			}
+				if(c!=null)
+					when.add(c);
+			}
+		}
+		if(!when.isEmpty()){
+			try {
+				Collections.sort(when, new ConceptCmp());
+			} catch (Exception e) {
+				// TODO: handle exception
+			}
+	        return when;
+		}
+		used.add(keyword);
+		while(!q.isEmpty()){
+			c = q.remove();
+			cDepth = c.getDepth();
+			tempc = c;
+			keyword = c.getConcept();
+			if(cDepth>3||used.contains(keyword))
+				continue;
+			json = readJsonFromUrl("http://conceptnet5.media.mit.edu/data/5.4/c/en/"+keyword+"?limit=1000");
+			num = (Integer)json.get("numFound");
+			for(int i=0;i<num;i++){
+				c = null;
+				rel = json.getJSONArray("edges").getJSONObject(i).get("rel").toString().substring(3).toLowerCase();
+				start = json.getJSONArray("edges").getJSONObject(i).get("start").toString().split("/");
+	    		end = json.getJSONArray("edges").getJSONObject(i).get("end").toString().split("/");
+	    		surfaceText = json.getJSONArray("edges").getJSONObject(i).get("surfaceText").toString();
+	    		score = (Double) json.getJSONArray("edges").getJSONObject(i).get("weight");
+	    		if(!(start[2].equals("en")&&end[2].equals("en")))
+	    			continue;	
+	    		if(rel.equals("hasprerequisite")){
+	    			if(end[3].equals(keyword)){
+	    				c = new Concept(start[3],rel,score*1.2);
+	    			}
+	    		}
+	    		else if(rel.equals("hassubevent")){
+	    			if(end[3].equals(keyword)){
+	    				c = new Concept(start[3],rel,score);
+	    			}
+		    	}
+	    		else if(rel.equals("relatedto")||rel.equals("synonym")){
+	    			if(start[3].equals(keyword)){
+	    				q.add(new Concept(end[3],rel,1));
+	    			}
+	    			else{
+	    				q.add(new Concept(start[3],rel,1));
+	    			}
+		    	}
+	    		if(c!=null){
+    				for(Concept tmp:when){
+	    				if(c.getConcept().equals(tmp.getConcept())){
+	    					if(tmp.getRel().contains(c.getRel().get(0))){
+	    						c = null;
+	    					}
+	    					else{
+	    						c.setScore(c.getScore()+tmp.getScore());
+	    						c.addRel(tmp.getRel());
+		    					when.remove(tmp);
+	    					}
+	    					break;
+	    				}
+	    			}
+    				if(c!=null)
+    					when.add(c);
+    			}
+			}
+			if(!when.isEmpty()){
+				try {
+					Collections.sort(when, new ConceptCmp());
+				} catch (Exception e) {
+					// TODO: handle exception
+				}
+		        return when;
 			}
 			used.add(keyword);
 		}
@@ -1223,6 +1616,7 @@ public class JsonReader {
 		int cDepth = 0;
 		Concept c;
 		String rel = null;
+		Concept tempc;
 		String start[];
 		String end[];
 		String surfaceText;
@@ -1261,6 +1655,14 @@ public class JsonReader {
     			}
     		
 	    	}
+			else if(rel.equals("relatedto")){
+    			if(start[3].equals(keyword)){
+    				q.add(new Concept(end[3],rel,1));
+    			}
+    			else{
+    				q.add(new Concept(start[3],rel,1));
+    			}
+	    	}
 			else if(rel.equals("notisa") || rel.equals("Antonym")){
     			buffer = end[3].split("_");
     			if(start[3].equals(keyword)){
@@ -1291,6 +1693,7 @@ public class JsonReader {
 		
 		while(!q.isEmpty()){
 			c = q.remove();
+			tempc = c;
 			keyword = c.getConcept();
 			cDepth = c.getDepth();
 			if(cDepth > 1||used.contains(keyword))
@@ -1329,6 +1732,14 @@ public class JsonReader {
 	    				}
 	    			}
 	    		
+		    	}
+				else if(rel.equals("relatedto")){
+	    			if(start[3].equals(keyword)){
+	    				q.add(new Concept(end[3],rel,cDepth+1));
+	    			}
+	    			else{
+	    				q.add(new Concept(start[3],rel,cDepth+1));
+	    			}
 		    	}
 				else if(rel.equals("notisa") || rel.equals("Antonym")){
 	    			buffer = end[3].split("_");
