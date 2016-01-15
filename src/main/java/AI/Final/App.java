@@ -77,9 +77,9 @@ public class App
 					break;
 				case "why":
 					temp = reader.searchWhy(term[1]);
-					if(temp==null)
+					if(temp==null || temp.isEmpty())
 						temp = reader.searchAnything(term[1]);
-					if(temp!=null)
+					if(temp!=null && !temp.isEmpty())
 						System.out.println(temp.get(0).getConcept());
 					else
 						System.out.println("I don't know.");
@@ -109,10 +109,10 @@ public class App
 							else{	
 								singleWord.add(cc);
 							}
-//							while(cc.getParent()!=null){
-//								cc = cc.getParent();
-//								System.out.print(" "+cc.getConcept()+" "+cc.getScore());
-//							}
+							while(cc.getParent()!=null){
+								cc = cc.getParent();
+								System.out.print(" "+cc.getConcept()+" "+cc.getScore());
+							}
 						}
 		            	if(!print&&!singleWord.isEmpty())
 		            		System.out.println(singleWord.get(0));

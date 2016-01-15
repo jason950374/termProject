@@ -55,6 +55,7 @@ public class JsonReader {
 	    }
 	    return sb.toString();
 	}
+	
 	public void init(){
 		List<String> input;
 		
@@ -96,6 +97,7 @@ public class JsonReader {
 	    return null;
 	  }
 	}
+	
 	public JSONObject readJsonFromUrl(String url) throws IOException, JSONException {
 	    InputStream is = new URL(url).openStream();
 	    try {
@@ -384,7 +386,8 @@ public class JsonReader {
 	    	}
     		if(c!=null){
     			if(surfaceText.contains("sometimes") 
-    					|| surfaceText.contains("might"))
+    					|| surfaceText.contains("might")
+    					|| surfaceText.contains("may be"))
     				c.setScore(c.getScore()*0.7);
 				for(Concept tmp:reason){
     				if(c.getConcept().equals(tmp.getConcept())){
@@ -665,7 +668,8 @@ public class JsonReader {
 		String[] sent =	WhitespaceTokenizer.INSTANCE.tokenize(keyword.replace("_", " "));
 		String[] tags = tagger.tag(sent);
 		for(int i = 0; i < tags.length; i++){
-			if(tags[i].contains("VB") && !sent[i].equals("be")){
+			if(tags[i].contains("VB") && !sent[i].equals("be")
+					&& !sent[i].equals("is") && !sent[i].equals("are")){
 				haveVerb = true;
 			}
 		}
